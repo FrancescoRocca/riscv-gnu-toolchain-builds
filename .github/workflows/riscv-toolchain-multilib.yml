@@ -1,0 +1,57 @@
+name: Build RISC-V toolchain multilib
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 720
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            autoconf automake autotools-dev curl python3 python3-pip python3-tomli \
+            libmpc-dev libmpfr-dev libgmp-dev gawk build-essential bison flex \
+            texinfo gperf libtool patchutils bc zlib1g-dev libexpat-dev \
+            ninja-build git cmake
+
+      - name: Clone riscv-gnu-toolchain
+        run: |
+          git clone --depth 1 https://github.com/riscv-collab/riscv-gnu-toolchain.git
+
+      - name: Configure
+        run: |
+          cd riscv-gnu-toolchain
+          ./configure \
+            --prefix="$GITHUB_WORKSPACE/riscv" \
+            --enable-multilib
+
+      - name: Build newlib toolchain
+        run: |
+          cd riscv-gnu-toolchain
+          make -j2
+
+      - name: Package toolchain
+        run: |
+          tar -C "$GITHUB_WORKSPACE" -czf riscv-toolchain-multilib.tar.gz riscv
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: riscv-toolchain-multilib
+          path: riscv-toolchain-multilib.tar.gz
+
+      - name: Publish release asset
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: riscv-toolchain-multilib.tar.gz
