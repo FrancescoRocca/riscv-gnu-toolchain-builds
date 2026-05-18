@@ -38,7 +38,7 @@ jobs:
       - name: Build newlib toolchain
         run: |
           cd riscv-gnu-toolchain
-          make -j2
+          make -j$(nproc)
 
       - name: Package toolchain
         run: |
